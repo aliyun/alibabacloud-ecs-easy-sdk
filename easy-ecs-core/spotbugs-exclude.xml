@@ -1,0 +1,10 @@
+<FindBugsFilter>
+    <Match>
+        <Class name="com.aliyun.ecs.easysdk.container.meta.BeanInfo"/>
+        <Bug code="EI,EI2" />
+    </Match>
+    <Match>
+        <Class name="com.aliyun.ecs.easysdk.container.meta.SortInfo"/>
+        <Bug code="UwF" />
+    </Match>
+</FindBugsFilter>
