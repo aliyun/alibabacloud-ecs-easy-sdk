@@ -26,7 +26,7 @@
     </scm>
     <profiles>
         <profile>
-            <id>release-1.0.0</id>
+            <id>release</id>
             <build>
                 <plugins>
                     <plugin>
@@ -95,7 +95,7 @@
     <groupId>com.aliyun.ecs.easysdk</groupId>
     <artifactId>easy-sdk-parent</artifactId>
     <packaging>pom</packaging>
-    <version>1.0.0</version>
+    <version>1.1.0</version>
     <properties>
         <file.encoding>UTF-8</file.encoding>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
