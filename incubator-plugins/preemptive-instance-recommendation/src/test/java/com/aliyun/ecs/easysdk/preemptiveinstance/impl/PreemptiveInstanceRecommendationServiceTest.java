@@ -28,6 +28,7 @@ import com.aliyun.ecs.easysdk.preemptiveinstance.model.PreemptiveInstanceRecomme
 import com.aliyun.ecs.easysdk.preemptiveinstance.model.PreemptiveInstanceRecommendationRequest;
 import com.aliyun.ecs.easysdk.system.config.ConfigKeys;
 import com.google.common.collect.Lists;
+import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -43,6 +44,24 @@ public class PreemptiveInstanceRecommendationServiceTest {
         preemptiveInstanceRecommendationService
                 = (PreemptiveInstanceRecommendationServiceImpl) EasyEcsSDK.getService(
                 PreemptiveInstanceRecommendationService.class);
+    }
+
+    @Test
+    public void limitRecommendCountTest(){
+        List<PreemptiveInstanceRecommendation> recommendations = Lists.newArrayList();
+        int limit = 3;
+        Response<List<PreemptiveInstanceRecommendation>> response = new Response<>(recommendations);
+        Assert.assertEquals(recommendations.size(),preemptiveInstanceRecommendationService.limitRecommendCount(limit,response).getData().size());
+        recommendations.add(new PreemptiveInstanceRecommendation());
+        recommendations.add(new PreemptiveInstanceRecommendation());
+        recommendations.add(new PreemptiveInstanceRecommendation());
+        response = new Response<>(recommendations);
+        limit = 5;
+        Assert.assertEquals(recommendations.size(),preemptiveInstanceRecommendationService.limitRecommendCount(limit,response).getData().size());
+        limit = -3;
+        Assert.assertEquals(recommendations.size(),preemptiveInstanceRecommendationService.limitRecommendCount(limit,response).getData().size());
+        limit = 1;
+        Assert.assertEquals(limit,preemptiveInstanceRecommendationService.limitRecommendCount(limit,response).getData().size());
     }
 
     @Test

@@ -35,7 +35,7 @@ public class PreemptiveInstanceRecommendationRequest {
 
     private String instanceType;
 
-    private int limit = 10;
+    private int limit = 5;
 
     public EnumEcsProductCategory getProductCategory() {
         return productCategory;
