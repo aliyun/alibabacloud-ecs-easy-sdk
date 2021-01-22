@@ -73,7 +73,7 @@ public class PreemptiveInstanceRecommendationServiceImpl implements PreemptiveIn
      * @return
      */
     public Response<List<PreemptiveInstanceRecommendation>> recommendInRegion(
-        PreemptiveInstanceRecommendationRequest request) {
+            PreemptiveInstanceRecommendationRequest request) {
         List<String> regions = request.getRegions();
         List<String> zones = request.getZones();
         String region = regions.get(0);
@@ -94,10 +94,28 @@ public class PreemptiveInstanceRecommendationServiceImpl implements PreemptiveIn
             return new Response<>(ILLEGAL_PARAM, "Illegal Param");
         }
         if (regions.size() == 1
-            && (CollectionUtils.isEmpty(zones) || zones.size() == 1)) {
-            return recommendInRegion(request);
+                && (CollectionUtils.isEmpty(zones) || zones.size() == 1)) {
+            return limitRecommendCount(request.getLimit(), recommendInRegion(request));
         }
-        return recommendAcrossRegions(request);
+        return limitRecommendCount(request.getLimit(), recommendAcrossRegions(request));
+    }
+
+    /**
+     * 将返回的推荐结果数量上限设置为limit
+     *
+     * @param limit     最多返回的推荐结果数量
+     * @param recommend 推荐结果
+     * @return 推荐结果数量最多为limit的推荐结果
+     */
+    public Response<List<PreemptiveInstanceRecommendation>> limitRecommendCount(int limit, Response<List<PreemptiveInstanceRecommendation>> recommend) {
+        if (limit < 0){
+            limit = Integer.MAX_VALUE;
+        }
+        List<PreemptiveInstanceRecommendation> recommendations = recommend.getData();
+        if (CollectionUtils.isEmpty(recommendations)) {
+            return recommend;
+        }
+        return new Response<>(recommendations.subList(0, Math.min(limit, recommendations.size())));
     }
 
     /**
@@ -107,7 +125,7 @@ public class PreemptiveInstanceRecommendationServiceImpl implements PreemptiveIn
      * @return
      */
     private Response<List<PreemptiveInstanceRecommendation>> recommendAcrossRegions(
-        PreemptiveInstanceRecommendationRequest request) {
+            PreemptiveInstanceRecommendationRequest request) {
         EnumRecommendationStrategy strategy = request.getStrategy();
         List<String> regions = request.getRegions();
         List<String> zones = request.getZones();
@@ -117,7 +135,7 @@ public class PreemptiveInstanceRecommendationServiceImpl implements PreemptiveIn
         String requestInstanceType = request.getInstanceType();
         try {
             List<DiscountInventoryModel> models = buildDiscountInventoryModel(regions, zones, core, memory,
-                requestInstanceType);
+                    requestInstanceType);
             if (EnumRecommendationStrategy.LOWEST_PRICE_FIRST == strategy) {
                 Comparator<DiscountInventoryModel> priceComparator = new PriceComparator();
                 return recommendByStrategy(models, request.getProductCategory(), priceComparator);
@@ -149,8 +167,8 @@ public class PreemptiveInstanceRecommendationServiceImpl implements PreemptiveIn
         }
         for (String region : regions) {
             Response<List<AvailableZone>> listResponse = preemptiveInstanceBaseService.describeAvailableResource(region,
-                core,
-                memory, requestInstanceType);
+                    core,
+                    memory, requestInstanceType);
             if (!listResponse.getSuccess()) {
                 continue;
             }
@@ -174,24 +192,24 @@ public class PreemptiveInstanceRecommendationServiceImpl implements PreemptiveIn
                         String statusCategory = supportedResource.getStatusCategory();
                         String instanceType = supportedResource.getValue();
                         SpotPrice latestPrice = preemptiveInstanceBaseService.describeLatestSpotPrice(region, zoneId,
-                            instanceType).getData();
-                        EcsInstanceType ecsInstanceType = preemptiveInstanceBaseService
-                            .describeInstanceType(
                                 instanceType).getData();
+                        EcsInstanceType ecsInstanceType = preemptiveInstanceBaseService
+                                .describeInstanceType(
+                                        instanceType).getData();
                         if (ecsInstanceType == null) {
                             continue;
                         }
                         Map<String, Integer> instanceTypeToDiscountMap = Maps.newHashMap();
                         Response<List<EcsInstanceType>> listResponse1 = preemptiveInstanceBaseService
-                            .describeInstanceTypes(
-                                ecsInstanceType.getInstanceTypeFamily(), ECS_API_DEFAULT_REGION);
+                                .describeInstanceTypes(
+                                        ecsInstanceType.getInstanceTypeFamily(), ECS_API_DEFAULT_REGION);
                         List<EcsInstanceType> ecsInstanceTypeList = Lists.newArrayList();
                         if (listResponse1.getSuccess() && CollectionUtils.isNotEmpty(listResponse1.getData())) {
                             ecsInstanceTypeList = listResponse1.getData();
                             for (EcsInstanceType instanceTypeAmongFamily : ecsInstanceTypeList) {
                                 SpotPrice spotPrice = preemptiveInstanceBaseService.describeLatestSpotPrice(region,
-                                    zoneId,
-                                    instanceTypeAmongFamily.getInstanceTypeId()).getData();
+                                        zoneId,
+                                        instanceTypeAmongFamily.getInstanceTypeId()).getData();
                                 if (spotPrice != null) {
                                     instanceTypeToDiscountMap.put(spotPrice.getInstanceType(), spotPrice.getDiscount());
                                 }
@@ -218,14 +236,14 @@ public class PreemptiveInstanceRecommendationServiceImpl implements PreemptiveIn
     }
 
     private Response<List<PreemptiveInstanceRecommendation>> recommendByStrategy(
-        List<DiscountInventoryModel> models, EnumEcsProductCategory productCategory,
-        Comparator<DiscountInventoryModel> comparator) {
+            List<DiscountInventoryModel> models, EnumEcsProductCategory productCategory,
+            Comparator<DiscountInventoryModel> comparator) {
 
         // 排除掉关闭售卖且无库存的规格
         List<DiscountInventoryModel> collect = models.stream().filter(e -> {
             EcsInventoryStatusCategory statusCategory = e.getStatusCategory();
             return !(EcsInventoryStatusCategory.ClosedWithoutStock == statusCategory
-                || EcsInventoryStatusCategory.WithoutStock == statusCategory);
+                    || EcsInventoryStatusCategory.WithoutStock == statusCategory);
         }).sorted(comparator).collect(Collectors.toList());
 
         return buildResponse(collect, productCategory);
@@ -241,12 +259,12 @@ public class PreemptiveInstanceRecommendationServiceImpl implements PreemptiveIn
             String instanceFamilyLevel = model.getInstanceFamilyLevel();
 
             if (productCategory != null
-                && !productCategory.name().equals(
-                instanceFamilyLevel)) {
+                    && !productCategory.name().equals(
+                    instanceFamilyLevel)) {
                 logger.info(
-                    "skipped instanceType: {} family: {} expected productCategory: {} actual productCategory: {}",
-                    instanceType, family,
-                    productCategory.name(), instanceFamilyLevel);
+                        "skipped instanceType: {} family: {} expected productCategory: {} actual productCategory: {}",
+                        instanceType, family,
+                        productCategory.name(), instanceFamilyLevel);
                 continue;
             }
 
