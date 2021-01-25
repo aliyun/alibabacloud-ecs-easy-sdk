@@ -41,9 +41,10 @@ public class EnterpriseLevelRecommendDemo {
         PreemptiveInstanceRecommendationService preemptiveInstanceRecommendationService = EasyEcsSDK.getService(PreemptiveInstanceRecommendationService.class);
         PreemptiveInstanceBaseService preemptiveInstanceBaseService = EasyEcsSDK.getService(PreemptiveInstanceBaseService.class);
         // 单地域推荐
-        singleRegionRecommendation(preemptiveInstanceRecommendationService, preemptiveInstanceBaseService);
+        singleRegionRecommendation(preemptiveInstanceRecommendationService);
         // 全地域推荐
 //        allRegionRecommendation(preemptiveInstanceRecommendationService, preemptiveInstanceBaseService);
+        multiRegionTest(preemptiveInstanceRecommendationService);
     }
 
     /**
@@ -68,14 +69,32 @@ public class EnterpriseLevelRecommendDemo {
     }
 
     /**
-     * 单地域，指定核数和CPU数的企业级抢占式实例推荐
+     * 单地域，指定核数和内存大小的企业级抢占式实例推荐
      * @param preemptiveInstanceRecommendationService 抢占式实例推荐服务
-     * @param preemptiveInstanceBaseService
      */
-    private static void singleRegionRecommendation(PreemptiveInstanceRecommendationService preemptiveInstanceRecommendationService, PreemptiveInstanceBaseService preemptiveInstanceBaseService) {
+    private static void singleRegionRecommendation(PreemptiveInstanceRecommendationService preemptiveInstanceRecommendationService) {
         PreemptiveInstanceRecommendationRequest request = new PreemptiveInstanceRecommendationRequest();
         // 设定推荐的地域范围
         request.setRegions(Lists.newArrayList(EcsDemoConstants.REGION_SHANGHAI));
+        // 设定需要推荐的实例核数（个）和内存大小（单位GB）
+        request.setCores(2);
+        request.setMemory(4);
+        // 设定推荐策略，见EnumRecommendationStrategy类
+        request.setStrategy(EnumRecommendationStrategy.SUFFICIENT_INVENTORY_FIRST);
+        // 设定产品类别
+        request.setProductCategory(EnumEcsProductCategory.EnterpriseLevel);
+        Response<List<PreemptiveInstanceRecommendation>> recommend = preemptiveInstanceRecommendationService.recommend(request);
+        RecommendationUtil.reportRecommendation(recommend);
+    }
+
+    /**
+     * 多地域，指定核数和内存大小的企业级抢占式实例推荐
+     * @param preemptiveInstanceRecommendationService
+     */
+    private static void multiRegionTest(PreemptiveInstanceRecommendationService preemptiveInstanceRecommendationService){
+        PreemptiveInstanceRecommendationRequest request = new PreemptiveInstanceRecommendationRequest();
+        // 设定推荐的地域范围
+        request.setRegions(Lists.newArrayList(EcsDemoConstants.REGION_SHANGHAI,EcsDemoConstants.REGION_BEIJING,EcsDemoConstants.REGION_HANGZHOU));
         // 设定需要推荐的实例核数（个）和内存大小（单位GB）
         request.setCores(2);
         request.setMemory(4);
