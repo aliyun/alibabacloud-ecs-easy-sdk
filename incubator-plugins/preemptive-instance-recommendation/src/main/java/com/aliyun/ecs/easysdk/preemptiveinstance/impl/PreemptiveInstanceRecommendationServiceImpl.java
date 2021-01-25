@@ -40,12 +40,14 @@ import com.aliyun.ecs.easysdk.preemptiveinstance.model.SpotPrice;
 import com.aliyun.ecs.easysdk.preemptiveinstance.strategy.InventoryComparator;
 import com.aliyun.ecs.easysdk.preemptiveinstance.strategy.PriceComparator;
 import com.aliyun.ecs.easysdk.preemptiveinstance.strategy.ProductGenerationComparator;
+import com.aliyun.ecs.easysdk.preemptiveinstance.task.DescribeLatestSpotPriceTask;
 import com.aliyuncs.ecs.model.v20140526.DescribeAvailableResourceResponse.AvailableZone;
 import com.aliyuncs.ecs.model.v20140526.DescribeAvailableResourceResponse.AvailableZone.AvailableResource;
 import com.aliyuncs.ecs.model.v20140526.DescribeAvailableResourceResponse.AvailableZone.AvailableResource.SupportedResource;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.time.StopWatch;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -108,7 +110,7 @@ public class PreemptiveInstanceRecommendationServiceImpl implements PreemptiveIn
      * @return 推荐结果数量最多为limit的推荐结果
      */
     public Response<List<PreemptiveInstanceRecommendation>> limitRecommendCount(int limit, Response<List<PreemptiveInstanceRecommendation>> recommend) {
-        if (limit < 0){
+        if (limit < 0) {
             limit = Integer.MAX_VALUE;
         }
         List<PreemptiveInstanceRecommendation> recommendations = recommend.getData();
@@ -133,9 +135,10 @@ public class PreemptiveInstanceRecommendationServiceImpl implements PreemptiveIn
         int core = request.getCores();
         int memory = request.getMemory();
         String requestInstanceType = request.getInstanceType();
+        String productCategory = request.getProductCategory().name();
         try {
             List<DiscountInventoryModel> models = buildDiscountInventoryModel(regions, zones, core, memory,
-                    requestInstanceType);
+                    requestInstanceType, productCategory);
             if (EnumRecommendationStrategy.LOWEST_PRICE_FIRST == strategy) {
                 Comparator<DiscountInventoryModel> priceComparator = new PriceComparator();
                 return recommendByStrategy(models, request.getProductCategory(), priceComparator);
@@ -160,7 +163,7 @@ public class PreemptiveInstanceRecommendationServiceImpl implements PreemptiveIn
     }
 
     private List<DiscountInventoryModel> buildDiscountInventoryModel(List<String> regions, List<String> zones, int core,
-                                                                     int memory, String requestInstanceType) {
+                                                                     int memory, String requestInstanceType, String productCategory) {
         List<DiscountInventoryModel> models = Lists.newArrayList();
         if (regions == null) {
             return models;
@@ -186,17 +189,26 @@ public class PreemptiveInstanceRecommendationServiceImpl implements PreemptiveIn
                 for (AvailableResource availableResource : availableResources) {
                     List<SupportedResource> supportedResources = availableResource.getSupportedResources();
                     for (SupportedResource supportedResource : supportedResources) {
-                        StopWatch stopWatch = new StopWatch();
-                        stopWatch.start();
+                        String availableStatus = "Available";
                         String status = supportedResource.getStatus();
                         String statusCategory = supportedResource.getStatusCategory();
+                        // 只考虑库存状态为WithStock的Spot实例
+                        if (!(status.equals(availableStatus) && statusCategory.equals(EcsInventoryStatusCategory.WithStock.name()))) {
+                            continue;
+                        }
+                        StopWatch stopWatch1 = new StopWatch();
+                        stopWatch1.start();
                         String instanceType = supportedResource.getValue();
+                        if (StringUtils.isBlank(instanceType)) {
+                            continue;
+                        }
                         SpotPrice latestPrice = preemptiveInstanceBaseService.describeLatestSpotPrice(region, zoneId,
                                 instanceType).getData();
                         EcsInstanceType ecsInstanceType = preemptiveInstanceBaseService
                                 .describeInstanceType(
                                         instanceType).getData();
-                        if (ecsInstanceType == null) {
+                        // 过滤掉与用户所需的ProductCategory不同的实例规格
+                        if (ecsInstanceType == null || !ecsInstanceType.getInstanceFamilyLevel().equals(productCategory)) {
                             continue;
                         }
                         Map<String, Integer> instanceTypeToDiscountMap = Maps.newHashMap();
@@ -206,10 +218,14 @@ public class PreemptiveInstanceRecommendationServiceImpl implements PreemptiveIn
                         List<EcsInstanceType> ecsInstanceTypeList = Lists.newArrayList();
                         if (listResponse1.getSuccess() && CollectionUtils.isNotEmpty(listResponse1.getData())) {
                             ecsInstanceTypeList = listResponse1.getData();
+                            List<DescribeLatestSpotPriceTask> taskList = Lists.newArrayList();
                             for (EcsInstanceType instanceTypeAmongFamily : ecsInstanceTypeList) {
-                                SpotPrice spotPrice = preemptiveInstanceBaseService.describeLatestSpotPrice(region,
-                                        zoneId,
-                                        instanceTypeAmongFamily.getInstanceTypeId()).getData();
+                                DescribeLatestSpotPriceTask task = new DescribeLatestSpotPriceTask(region, zoneId, instanceTypeAmongFamily.getInstanceTypeId(), preemptiveInstanceBaseService);
+                                taskList.add(task);
+                                task.fork();
+                            }
+                            for (DescribeLatestSpotPriceTask task : taskList) {
+                                SpotPrice spotPrice = task.join();
                                 if (spotPrice != null) {
                                     instanceTypeToDiscountMap.put(spotPrice.getInstanceType(), spotPrice.getDiscount());
                                 }
