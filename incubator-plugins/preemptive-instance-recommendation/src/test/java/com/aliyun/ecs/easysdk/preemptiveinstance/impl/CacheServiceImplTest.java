@@ -15,10 +15,6 @@
  */
 package com.aliyun.ecs.easysdk.preemptiveinstance.impl;
 
-import java.util.List;
-
-import com.alibaba.fastjson.JSON;
-
 import com.aliyun.ecs.easysdk.EasyEcsSDK;
 import com.aliyun.ecs.easysdk.preemptiveinstance.CacheService;
 import com.aliyun.ecs.easysdk.system.config.ConfigKeys;

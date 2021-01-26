@@ -14,5 +14,6 @@
 
     <modules>
         <module>preemptive-instance-recommendation</module>
+        <module>cli-tool</module>
     </modules>
 </project>
