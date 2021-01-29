@@ -14,10 +14,11 @@
  * limitations under the License.
  */
 
+import com.aliyun.ecs.easysdk.CommandLineToolMain;
 import com.aliyun.ecs.easysdk.biz.constants.EnumEcsProductCategory;
 import com.aliyun.ecs.easysdk.preemptiveinstance.model.EnumRecommendationStrategy;
 import com.google.common.collect.Lists;
-import model.InstanceTypeInfo;
+import com.aliyun.ecs.easysdk.model.InstanceTypeInfo;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.DefaultParser;

@@ -5,9 +5,10 @@
     <parent>
         <groupId>com.aliyun.ecs.easysdk</groupId>
         <artifactId>incubator-plugins</artifactId>
-        <version>1.1.0</version>
+        <version>1.1.1-SNAPSHOT</version>
     </parent>
     <artifactId>cli-tool</artifactId>
+    <version>1.1.1-SNAPSHOT</version>
     <modelVersion>4.0.0</modelVersion>
     <dependencies>
         <dependency>
@@ -28,5 +29,30 @@
             <groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>
         </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-simple</artifactId>
+            <version>1.7.25</version>
+        </dependency>
     </dependencies>
+    <build>
+        <finalName>EasySDK-cli-tool</finalName>
+        <plugins>
+            <plugin>
+                <groupId>com.jolira</groupId>
+                <artifactId>onejar-maven-plugin</artifactId>
+                <version>1.4.4</version>
+                <configuration>
+                    <mainClass>com.aliyun.ecs.easysdk.CommandLineToolMain</mainClass>
+                </configuration>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>one-jar</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
 </project>
