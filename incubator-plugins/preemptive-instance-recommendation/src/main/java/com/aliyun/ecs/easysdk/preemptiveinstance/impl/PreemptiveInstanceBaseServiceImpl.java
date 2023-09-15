@@ -186,10 +186,6 @@ public class PreemptiveInstanceBaseServiceImpl implements PreemptiveInstanceBase
             acsRequest.setNetworkType("vpc");
             acsRequest.setIoOptimized("optimized");
             acsRequest.setInstanceType(instanceType);
-            Date startTime = DateUtils.addHours(Calendar.getInstance().getTime(), -hours);
-            acsRequest.setStartTime(PreemptiveInstanceDateUtils.formatIso8601Date(startTime));
-            Date endTime = Calendar.getInstance().getTime();
-            acsRequest.setEndTime(PreemptiveInstanceDateUtils.formatIso8601Date(endTime));
             DescribeSpotPriceHistoryResponse acsResponse = iAcsClient.getAcsResponse(acsRequest);
             if (CollectionUtils.isEmpty(acsResponse.getSpotPrices())) {
                 logger.warn("listSpotPriceHistory return null. region: {} zone: {} instanceType: {} days: {}", regionId,
